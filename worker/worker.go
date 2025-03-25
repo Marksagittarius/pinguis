@@ -31,7 +31,7 @@ func NewGoWorkerPool(workerCount int) *GoWorkerPool {
 		tasks: make(chan func()),
 		quit:  make(chan struct{}),
 	}
-	for i := 0; i < workerCount; i++ {
+	for range workerCount {
 		pool.wg.Add(1)
 		go func() {
 			defer pool.wg.Done()
