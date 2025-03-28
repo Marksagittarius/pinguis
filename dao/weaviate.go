@@ -14,6 +14,7 @@ package dao
 // - models: For working with Weaviate's data models.
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -245,7 +246,15 @@ func ToClass(object any) *models.Class {
         }
         
         var dataType string
-        switch field.Type.Kind() {
+        var isArray bool
+        
+        fieldType := field.Type
+        if fieldType.Kind() == reflect.Slice || fieldType.Kind() == reflect.Array {
+            isArray = true
+            fieldType = fieldType.Elem()
+        }
+        
+        switch fieldType.Kind() {
         case reflect.String:
             dataType = "string"
         case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
@@ -253,8 +262,19 @@ func ToClass(object any) *models.Class {
             dataType = "int"
         case reflect.Float32, reflect.Float64:
             dataType = "number"
+        case reflect.Struct:
+            dataType = fieldType.Name()
+            
+            if len(dataType) > 0 {
+                firstChar := dataType[0:1]
+                dataType = strings.ToUpper(firstChar) + dataType[1:]
+            }
         default:
             continue
+        }
+        
+        if isArray {
+            dataType = dataType + "[]"
         }
         
         property := &models.Property{
@@ -286,40 +306,111 @@ func ToClass(object any) *models.Class {
 //   - If a JSON tag is present, its first value is used as the key in the resulting map.
 //   - Field names are converted to lowercase if no JSON tag is specified.
 func ToProperties(object any) map[string]any {
-	t := reflect.TypeOf(object)
-	
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	
-	if t.Kind() != reflect.Struct {
-		return nil
-	}
-	
-	properties := make(map[string]any)
-	
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		
-		if !field.IsExported() {
-			continue
-		}
-		
-		propName := field.Name
-		if jsonTag := field.Tag.Get("json"); jsonTag != "" {
-			parts := strings.Split(jsonTag, ",")
-			if parts[0] != "-" {
-				propName = parts[0]
-			}
-		}
-		
-		if propName == field.Name {
-			propName = strings.ToLower(propName)
-		}
-		
-		value := reflect.ValueOf(object).Field(i).Interface()
-		properties[propName] = value
-	}
-	
-	return properties
+    if object == nil {
+        return nil
+    }
+    
+    t := reflect.TypeOf(object)
+    v := reflect.ValueOf(object)
+    
+    if t.Kind() == reflect.Ptr {
+        if v.IsNil() {
+            return nil
+        }
+        return ToProperties(v.Elem().Interface())
+    }
+    
+    if t.Kind() != reflect.Struct {
+        return nil
+    }
+    
+    properties := make(map[string]any)
+    
+    for i := 0; i < t.NumField(); i++ {
+        field := t.Field(i)
+        
+        if !field.IsExported() {
+            continue
+        }
+        
+        propName := field.Name
+        if jsonTag := field.Tag.Get("json"); jsonTag != "" {
+            parts := strings.Split(jsonTag, ",")
+            if parts[0] == "-" {
+                continue
+            } else if parts[0] != "" {
+                propName = parts[0]
+            }
+        }
+        
+        if propName == field.Name {
+            propName = strings.ToLower(propName)
+        }
+        
+        fieldValue := v.Field(i)
+        properties[propName] = processFieldValue(fieldValue)
+    }
+    
+    return properties
+}
+
+func processFieldValue(v reflect.Value) any {
+    if !v.IsValid() {
+        return nil
+    }
+    
+    if v.Kind() == reflect.Ptr {
+        if v.IsNil() {
+            return nil
+        }
+        return processFieldValue(v.Elem())
+    }
+    
+    switch v.Kind() {
+    case reflect.Struct:
+        return ToProperties(v.Interface())
+        
+    case reflect.Slice, reflect.Array:
+        length := v.Len()
+        result := make([]any, length)
+        
+        for i := 0; i < length; i++ {
+            elem := v.Index(i)
+            if elem.Kind() == reflect.Struct || 
+               elem.Kind() == reflect.Ptr || 
+               elem.Kind() == reflect.Slice || 
+               elem.Kind() == reflect.Array ||
+               elem.Kind() == reflect.Map {
+                result[i] = processFieldValue(elem)
+            } else {
+                result[i] = elem.Interface()
+            }
+        }
+        
+        return result
+        
+    case reflect.Map:
+        result := make(map[string]any)
+        
+        iter := v.MapRange()
+        for iter.Next() {
+            key := fmt.Sprintf("%v", iter.Key().Interface())
+            val := iter.Value()
+            
+            if val.Kind() == reflect.Struct || 
+               val.Kind() == reflect.Ptr || 
+               val.Kind() == reflect.Slice || 
+               val.Kind() == reflect.Array ||
+               val.Kind() == reflect.Map {
+                result[key] = processFieldValue(val)
+            } else {
+                result[key] = val.Interface()
+            }
+        }
+        
+        return result
+        
+    default:
+        return v.Interface()
+    }
 }
