@@ -26,7 +26,7 @@ import (
 )
 
 type Weaviate struct {
-	client *weaviate.Client
+	client  *weaviate.Client
 	context context.Context
 }
 
@@ -46,7 +46,7 @@ func New(config weaviate.Config, context context.Context) (*Weaviate, error) {
 		return nil, err
 	}
 
-	return &Weaviate{ client: client, context: context }, nil
+	return &Weaviate{client: client, context: context}, nil
 }
 
 // GetClient returns the Weaviate client instance associated with the Weaviate object.
@@ -56,7 +56,7 @@ func (w *Weaviate) GetClient() *weaviate.Client {
 }
 
 // AddClass adds a new class to the Weaviate schema.
-// 
+//
 // Parameters:
 //   - context: The context for the operation, used for managing timeouts and cancellations.
 //   - class: A pointer to the models.Class object representing the class to be added.
@@ -64,11 +64,11 @@ func (w *Weaviate) GetClient() *weaviate.Client {
 // Returns:
 //   - error: An error if the operation fails, or nil if the class is successfully added.
 func (w *Weaviate) AddClass(context context.Context, class *models.Class) error {
-	return w.client.Schema().ClassCreator().WithClass(class).Do(w.context);
+	return w.client.Schema().ClassCreator().WithClass(class).Do(w.context)
 }
 
 // GetClassByName retrieves a class definition from the Weaviate schema by its name.
-// 
+//
 // Parameters:
 //   - className: The name of the class to retrieve.
 //
@@ -87,7 +87,7 @@ func (w *Weaviate) GetSchema() (*schema.Dump, error) {
 }
 
 // DeleteClass deletes a class from the Weaviate schema.
-// 
+//
 // Parameters:
 //   - className: The name of the class to be deleted.
 //
@@ -98,7 +98,7 @@ func (w *Weaviate) AddProperties(className string, property *models.Property) er
 }
 
 // AddObjects adds multiple objects to the Weaviate database in a single batch operation.
-// It takes a variadic parameter of pointers to models.Object and returns a slice of 
+// It takes a variadic parameter of pointers to models.Object and returns a slice of
 // models.ObjectsGetResponse and an error.
 //
 // Parameters:
@@ -112,7 +112,7 @@ func (w *Weaviate) AddObjects(objects ...*models.Object) ([]models.ObjectsGetRes
 }
 
 // CreateObject creates a new object in Weaviate with the specified class name and properties.
-// 
+//
 // Parameters:
 //   - className: The name of the class to which the object belongs.
 //   - properties: A map containing the properties of the object to be created.
@@ -139,11 +139,11 @@ func (w *Weaviate) GetObjectsByClass(className string, fields ...graphql.Field) 
 }
 
 // GetObjectByID retrieves objects of a specified class by their unique ID from the Weaviate database.
-// 
+//
 // Parameters:
 //   - className: The name of the class to which the object belongs.
 //   - id: The unique identifier of the object to retrieve.
-// 
+//
 // Returns:
 //   - []*models.Object: A slice of objects matching the specified class and ID.
 //   - error: An error if the retrieval operation fails.
@@ -166,7 +166,7 @@ func (w *Weaviate) UpdateObject(className string, id string, properties map[stri
 }
 
 // ReplaceObject replaces an existing object in Weaviate with the specified class name, ID, and properties.
-// 
+//
 // Parameters:
 //   - className: The name of the class to which the object belongs.
 //   - id: The unique identifier of the object to be replaced.
@@ -179,11 +179,11 @@ func (w *Weaviate) ReplaceObject(className string, id string, properties map[str
 }
 
 // DeleteObject deletes an object from the Weaviate database based on the specified class name and ID.
-// 
+//
 // Parameters:
 //   - className: The name of the class to which the object belongs.
 //   - id: The unique identifier of the object to be deleted.
-// 
+//
 // Returns:
 //   - error: An error if the deletion fails, or nil if the operation is successful.
 func (w *Weaviate) DeleteObject(className string, id string) error {
@@ -206,86 +206,86 @@ func (w *Weaviate) DeleteObject(className string, id string) error {
 //   - It iterates over the exported fields of the struct to generate properties.
 //   - Field names are converted to lowercase unless overridden by a `json` tag.
 //   - Supported field types are mapped to specific data types:
-//       - string -> "string"
-//       - int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64 -> "int"
-//       - float32, float64 -> "number"
+//   - string -> "string"
+//   - int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64 -> "int"
+//   - float32, float64 -> "number"
 //   - Fields with unsupported types or unexported fields are ignored.
 func ToClass(object any) *models.Class {
-    t := reflect.TypeOf(object)
-    
-    if t.Kind() == reflect.Ptr {
-        t = t.Elem()
-    }
-    
-    if t.Kind() != reflect.Struct {
-        return nil
-    }
-    
-    class := &models.Class{
-        Class:      t.Name(),
-        Properties: []*models.Property{},
-    }
-    
-    for i := 0; i < t.NumField(); i++ {
-        field := t.Field(i)
-        
-        if !field.IsExported() {
-            continue
-        }
-        
-        propName := field.Name
-        if jsonTag := field.Tag.Get("json"); jsonTag != "" {
-            parts := strings.Split(jsonTag, ",")
-            if parts[0] != "-" {
-                propName = parts[0]
-            }
-        }
-        
-        if propName == field.Name {
-            propName = strings.ToLower(propName)
-        }
-        
-        var dataType string
-        var isArray bool
-        
-        fieldType := field.Type
-        if fieldType.Kind() == reflect.Slice || fieldType.Kind() == reflect.Array {
-            isArray = true
-            fieldType = fieldType.Elem()
-        }
-        
-        switch fieldType.Kind() {
-        case reflect.String:
-            dataType = "string"
-        case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-            reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-            dataType = "int"
-        case reflect.Float32, reflect.Float64:
-            dataType = "number"
-        case reflect.Struct:
-            dataType = fieldType.Name()
-            
-            if len(dataType) > 0 {
-                firstChar := dataType[0:1]
-                dataType = strings.ToUpper(firstChar) + dataType[1:]
-            }
-        default:
-            continue
-        }
-        
-        if isArray {
-            dataType = dataType + "[]"
-        }
-        
-        property := &models.Property{
-            Name:     propName,
-            DataType: []string{dataType},
-        }
+	t := reflect.TypeOf(object)
 
-        class.Properties = append(class.Properties, property)
-    }
-    
-    return class
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	if t.Kind() != reflect.Struct {
+		return nil
+	}
+
+	class := &models.Class{
+		Class:      t.Name(),
+		Properties: []*models.Property{},
+	}
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+
+		if !field.IsExported() {
+			continue
+		}
+
+		propName := field.Name
+		if jsonTag := field.Tag.Get("json"); jsonTag != "" {
+			parts := strings.Split(jsonTag, ",")
+			if parts[0] != "-" {
+				propName = parts[0]
+			}
+		}
+
+		if propName == field.Name {
+			propName = strings.ToLower(propName)
+		}
+
+		var dataType string
+		var isArray bool
+
+		fieldType := field.Type
+		if fieldType.Kind() == reflect.Slice || fieldType.Kind() == reflect.Array {
+			isArray = true
+			fieldType = fieldType.Elem()
+		}
+
+		switch fieldType.Kind() {
+		case reflect.String:
+			dataType = "string"
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			dataType = "int"
+		case reflect.Float32, reflect.Float64:
+			dataType = "number"
+		case reflect.Struct:
+			dataType = fieldType.Name()
+
+			if len(dataType) > 0 {
+				firstChar := dataType[0:1]
+				dataType = strings.ToUpper(firstChar) + dataType[1:]
+			}
+		default:
+			continue
+		}
+
+		if isArray {
+			dataType = dataType + "[]"
+		}
+
+		property := &models.Property{
+			Name:     propName,
+			DataType: []string{dataType},
+		}
+
+		class.Properties = append(class.Properties, property)
+	}
+
+	return class
 }
 
 // ToProperties converts a struct or a pointer to a struct into a map[string]any,
@@ -306,25 +306,176 @@ func ToClass(object any) *models.Class {
 //   - If a JSON tag is present, its first value is used as the key in the resulting map.
 //   - Field names are converted to lowercase if no JSON tag is specified.
 func ToProperties(object any) map[string]any {
-    if object == nil {
-        return nil
+	if object == nil {
+		return nil
+	}
+
+	t := reflect.TypeOf(object)
+	v := reflect.ValueOf(object)
+
+	if t.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return nil
+		}
+		return ToProperties(v.Elem().Interface())
+	}
+
+	if t.Kind() != reflect.Struct {
+		return nil
+	}
+
+	properties := make(map[string]any)
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+
+		if !field.IsExported() {
+			continue
+		}
+
+		propName := field.Name
+		if jsonTag := field.Tag.Get("json"); jsonTag != "" {
+			parts := strings.Split(jsonTag, ",")
+			if parts[0] == "-" {
+				continue
+			} else if parts[0] != "" {
+				propName = parts[0]
+			}
+		}
+
+		if propName == field.Name {
+			propName = strings.ToLower(propName)
+		}
+
+		fieldValue := v.Field(i)
+		properties[propName] = processFieldValue(fieldValue)
+	}
+
+	return properties
+}
+
+func processFieldValue(v reflect.Value) any {
+	if !v.IsValid() {
+		return nil
+	}
+
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return nil
+		}
+		return processFieldValue(v.Elem())
+	}
+
+	switch v.Kind() {
+	case reflect.Struct:
+		return ToProperties(v.Interface())
+
+	case reflect.Slice, reflect.Array:
+		length := v.Len()
+		result := make([]any, length)
+
+		for i := 0; i < length; i++ {
+			elem := v.Index(i)
+			if elem.Kind() == reflect.Struct ||
+				elem.Kind() == reflect.Ptr ||
+				elem.Kind() == reflect.Slice ||
+				elem.Kind() == reflect.Array ||
+				elem.Kind() == reflect.Map {
+				result[i] = processFieldValue(elem)
+			} else {
+				result[i] = elem.Interface()
+			}
+		}
+
+		return result
+
+	case reflect.Map:
+		result := make(map[string]any)
+
+		iter := v.MapRange()
+		for iter.Next() {
+			key := fmt.Sprintf("%v", iter.Key().Interface())
+			val := iter.Value()
+
+			if val.Kind() == reflect.Struct ||
+				val.Kind() == reflect.Ptr ||
+				val.Kind() == reflect.Slice ||
+				val.Kind() == reflect.Array ||
+				val.Kind() == reflect.Map {
+				result[key] = processFieldValue(val)
+			} else {
+				result[key] = val.Interface()
+			}
+		}
+
+		return result
+
+	default:
+		return v.Interface()
+	}
+}
+
+// ToFields converts a Go struct or pointer to a struct into a slice of GraphQL fields.
+// It recursively processes nested structs and respects JSON tags for field names.
+//
+// Parameters:
+//   - object: The input object, which can be any type. If the object is not a struct
+//             or a pointer to a struct, an empty slice is returned.
+//
+// Returns:
+//   - []graphql.Field: A slice of GraphQL fields representing the structure of the input object.
+//
+// Behavior:
+//   - If the input is nil, an empty slice is returned.
+//   - If the input is a pointer, it is dereferenced to access the underlying struct.
+//   - If the input is not a struct, an empty slice is returned.
+//   - Fields that are unexported or have a JSON tag with "-" are ignored.
+//   - JSON tags are used to determine field names, falling back to the struct field name if no tag is present.
+//   - Nested structs are processed recursively, creating nested GraphQL fields.
+//   - Slice and array fields are handled by inspecting their element type.
+//
+// Example:
+//   Given the following struct:
+//     type Example struct {
+//         ID   string `json:"id"`
+//         Name string
+//         Meta struct {
+//             CreatedAt string `json:"created_at"`
+//         }
+//     }
+//
+//   Calling ToFields(Example{}) would produce:
+//     []graphql.Field{
+//         {Name: "id"},
+//         {Name: "Name"},
+//         {
+//             Name: "Meta",
+//             Fields: []graphql.Field{
+//                 {
+//                     Name: "... on Meta",
+//                     Fields: []graphql.Field{
+//                         {Name: "created_at"},
+//                     },
+//                 },
+//             },
+//         },
+//     }
+func ToFields(object any) []graphql.Field {
+    t := reflect.TypeOf(object)
+    
+    if t == nil {
+        return []graphql.Field{}
     }
     
-    t := reflect.TypeOf(object)
-    v := reflect.ValueOf(object)
-    
     if t.Kind() == reflect.Ptr {
-        if v.IsNil() {
-            return nil
-        }
-        return ToProperties(v.Elem().Interface())
+        t = t.Elem()
     }
     
     if t.Kind() != reflect.Struct {
-        return nil
+        return []graphql.Field{}
     }
     
-    properties := make(map[string]any)
+    var fields []graphql.Field
     
     for i := 0; i < t.NumField(); i++ {
         field := t.Field(i)
@@ -333,84 +484,46 @@ func ToProperties(object any) map[string]any {
             continue
         }
         
-        propName := field.Name
+        fieldName := field.Name
         if jsonTag := field.Tag.Get("json"); jsonTag != "" {
             parts := strings.Split(jsonTag, ",")
             if parts[0] == "-" {
                 continue
             } else if parts[0] != "" {
-                propName = parts[0]
+                fieldName = parts[0]
             }
         }
         
-        if propName == field.Name {
-            propName = strings.ToLower(propName)
-        }
+        fieldType := field.Type
         
-        fieldValue := v.Field(i)
-        properties[propName] = processFieldValue(fieldValue)
-    }
-    
-    return properties
-}
-
-func processFieldValue(v reflect.Value) any {
-    if !v.IsValid() {
-        return nil
-    }
-    
-    if v.Kind() == reflect.Ptr {
-        if v.IsNil() {
-            return nil
-        }
-        return processFieldValue(v.Elem())
-    }
-    
-    switch v.Kind() {
-    case reflect.Struct:
-        return ToProperties(v.Interface())
-        
-    case reflect.Slice, reflect.Array:
-        length := v.Len()
-        result := make([]any, length)
-        
-        for i := 0; i < length; i++ {
-            elem := v.Index(i)
-            if elem.Kind() == reflect.Struct || 
-               elem.Kind() == reflect.Ptr || 
-               elem.Kind() == reflect.Slice || 
-               elem.Kind() == reflect.Array ||
-               elem.Kind() == reflect.Map {
-                result[i] = processFieldValue(elem)
-            } else {
-                result[i] = elem.Interface()
-            }
-        }
-        
-        return result
-        
-    case reflect.Map:
-        result := make(map[string]any)
-        
-        iter := v.MapRange()
-        for iter.Next() {
-            key := fmt.Sprintf("%v", iter.Key().Interface())
-            val := iter.Value()
+        if fieldType.Kind() == reflect.Slice || fieldType.Kind() == reflect.Array {
+            fieldType = fieldType.Elem()
             
-            if val.Kind() == reflect.Struct || 
-               val.Kind() == reflect.Ptr || 
-               val.Kind() == reflect.Slice || 
-               val.Kind() == reflect.Array ||
-               val.Kind() == reflect.Map {
-                result[key] = processFieldValue(val)
-            } else {
-                result[key] = val.Interface()
+            if fieldType.Kind() == reflect.Ptr {
+                fieldType = fieldType.Elem()
             }
         }
         
-        return result
-        
-    default:
-        return v.Interface()
+        if fieldType.Kind() == reflect.Struct {
+            nestedInstance := reflect.New(fieldType).Elem().Interface()
+            
+            typeName := fieldType.Name()
+            
+            nestedField := graphql.Field{
+                Name: fieldName,
+                Fields: []graphql.Field{
+                    {
+                        Name:   "... on " + typeName,
+                        Fields: ToFields(nestedInstance), // Recursive call
+                    },
+                },
+            }
+            
+            fields = append(fields, nestedField)
+        } else {
+            fields = append(fields, graphql.Field{Name: fieldName})
+        }
     }
+    
+    return fields
 }
