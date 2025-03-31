@@ -1,0 +1,482 @@
+{
+  "path": "example.py",
+  "module": "",
+  "classes": [
+    {
+      "name": "Entity",
+      "fields": [
+        {
+          "name": "id",
+          "type": "int"
+        },
+        {
+          "name": "created_at",
+          "type": "datetime.datetime"
+        },
+        {
+          "name": "updated_at",
+          "type": "datetime.datetime"
+        }
+      ],
+      "methods": [
+        {
+          "reciever": "Entity",
+          "function": {
+            "name": "__init__",
+            "parameters": [
+              {
+                "name": "self",
+                "type": "Any"
+              },
+              {
+                "name": "id",
+                "type": "int"
+              }
+            ],
+            "return-types": [
+              "None"
+            ],
+            "body": "self.id = id\n        self.created_at = datetime.datetime.now()\n        self.updated_at = self.created_at"
+          }
+        },
+        {
+          "reciever": "Entity",
+          "function": {
+            "name": "update",
+            "parameters": [
+              {
+                "name": "self",
+                "type": "Any"
+              }
+            ],
+            "return-types": [
+              "None"
+            ],
+            "body": "\"\"\"Update the entity's updated_at timestamp.\"\"\"\n        self.updated_at = datetime.datetime.now()"
+          }
+        },
+        {
+          "reciever": "Entity",
+          "function": {
+            "name": "age",
+            "parameters": [
+              {
+                "name": "self",
+                "type": "Any"
+              }
+            ],
+            "return-types": [
+              "datetime.timedelta"
+            ],
+            "body": "\"\"\"Calculate the age of the entity.\"\"\"\n        return datetime.datetime.now() - self.created_at"
+          }
+        }
+      ]
+    },
+    {
+      "name": "GenericRepository",
+      "fields": [
+        {
+          "name": "_entities",
+          "type": "Dict[Tuple[int, T]]"
+        },
+        {
+          "name": "_next_id",
+          "type": "int"
+        },
+        {
+          "name": "_entity_type",
+          "type": "type"
+        }
+      ],
+      "methods": [
+        {
+          "reciever": "GenericRepository",
+          "function": {
+            "name": "__init__",
+            "parameters": [
+              {
+                "name": "self",
+                "type": "Any"
+              },
+              {
+                "name": "entity_type",
+                "type": "type"
+              }
+            ],
+            "return-types": [
+              "None"
+            ],
+            "body": "self._entities = {}\n        self._next_id = 1\n        self._entity_type = entity_type"
+          }
+        },
+        {
+          "reciever": "GenericRepository",
+          "function": {
+            "name": "find_by_id",
+            "parameters": [
+              {
+                "name": "self",
+                "type": "Any"
+              },
+              {
+                "name": "id",
+                "type": "int"
+              }
+            ],
+            "return-types": [
+              "Optional[T]"
+            ],
+            "body": "\"\"\"Find an entity by its ID.\"\"\"\n        return self._entities.get(id)"
+          }
+        },
+        {
+          "reciever": "GenericRepository",
+          "function": {
+            "name": "find_all",
+            "parameters": [
+              {
+                "name": "self",
+                "type": "Any"
+              }
+            ],
+            "return-types": [
+              "List[T]"
+            ],
+            "body": "\"\"\"Find all entities in the repository.\"\"\"\n        return list(self._entities.values())"
+          }
+        },
+        {
+          "reciever": "GenericRepository",
+          "function": {
+            "name": "save",
+            "parameters": [
+              {
+                "name": "self",
+                "type": "Any"
+              },
+              {
+                "name": "entity",
+                "type": "T"
+              }
+            ],
+            "return-types": [
+              "T"
+            ],
+            "body": "\"\"\"Save an entity to the repository.\"\"\"\n        if not isinstance(entity, self._entity_type):\n            raise TypeError(f\"Expected {self._entity_type.__name__}, got {type(entity).__name__}\")\n        \n        if not hasattr(entity, 'id') or entity.id is None:\n            entity.id = self._next_id\n            self._next_id += 1\n        \n        self._entities[entity.id] = entity\n        return entity"
+          }
+        },
+        {
+          "reciever": "GenericRepository",
+          "function": {
+            "name": "delete",
+            "parameters": [
+              {
+                "name": "self",
+                "type": "Any"
+              },
+              {
+                "name": "id",
+                "type": "int"
+              }
+            ],
+            "return-types": [
+              "bool"
+            ],
+            "body": "\"\"\"Delete an entity from the repository.\"\"\"\n        if id in self._entities:\n            del self._entities[id]\n            return True\n        return False"
+          }
+        },
+        {
+          "reciever": "GenericRepository",
+          "function": {
+            "name": "create_for",
+            "parameters": [
+              {
+                "name": "cls",
+                "type": "Any"
+              },
+              {
+                "name": "entity_type",
+                "type": "type"
+              }
+            ],
+            "return-types": [
+              "GenericRepository[Any]"
+            ],
+            "body": "\"\"\"Factory method to create a repository for a specific entity type.\"\"\"\n        return cls(entity_type)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "fields": [
+        {
+          "name": "username",
+          "type": "str"
+        },
+        {
+          "name": "email",
+          "type": "str"
+        },
+        {
+          "name": "password_hash",
+          "type": "str"
+        },
+        {
+          "name": "is_active",
+          "type": "bool"
+        },
+        {
+          "name": "roles",
+          "type": "List[str]"
+        }
+      ],
+      "methods": [
+        {
+          "reciever": "User",
+          "function": {
+            "name": "__post_init__",
+            "parameters": [
+              {
+                "name": "self",
+                "type": "Any"
+              }
+            ],
+            "return-types": [
+              "None"
+            ],
+            "body": "super().__init__(getattr(self, 'id', None))"
+          }
+        },
+        {
+          "reciever": "User",
+          "function": {
+            "name": "set_password",
+            "parameters": [
+              {
+                "name": "self",
+                "type": "Any"
+              },
+              {
+                "name": "password",
+                "type": "str"
+              }
+            ],
+            "return-types": [
+              "None"
+            ],
+            "body": "\"\"\"Set the user's password.\"\"\"\n        # In a real application, this would hash the password\n        self.password_hash = f\"hashed_{password}\"\n        self.update()"
+          }
+        },
+        {
+          "reciever": "User",
+          "function": {
+            "name": "check_password",
+            "parameters": [
+              {
+                "name": "self",
+                "type": "Any"
+              },
+              {
+                "name": "password",
+                "type": "str"
+              }
+            ],
+            "return-types": [
+              "bool"
+            ],
+            "body": "\"\"\"Check if the provided password is correct.\"\"\"\n        return self.password_hash == f\"hashed_{password}\""
+          }
+        },
+        {
+          "reciever": "User",
+          "function": {
+            "name": "is_admin",
+            "parameters": [
+              {
+                "name": "self",
+                "type": "Any"
+              }
+            ],
+            "return-types": [
+              "bool"
+            ],
+            "body": "\"\"\"Check if the user is an admin.\"\"\"\n        return \"admin\" in self.roles"
+          }
+        }
+      ]
+    },
+    {
+      "name": "AuthService",
+      "fields": [
+        {
+          "name": "_user_repository",
+          "type": "GenericRepository[User]"
+        },
+        {
+          "name": "_token_generator",
+          "type": "Callable[Tuple[List, str]]"
+        }
+      ],
+      "methods": [
+        {
+          "reciever": "AuthService",
+          "function": {
+            "name": "__init__",
+            "parameters": [
+              {
+                "name": "self",
+                "type": "Any"
+              },
+              {
+                "name": "user_repository",
+                "type": "GenericRepository[User]"
+              },
+              {
+                "name": "token_generator",
+                "type": "Callable[Tuple[List, str]]"
+              }
+            ],
+            "return-types": [
+              "None"
+            ],
+            "body": "token_generator: Callable[[User], str]):\n        self._user_repository = user_repository\n        self._token_generator = token_generator"
+          }
+        },
+        {
+          "reciever": "AuthService",
+          "function": {
+            "name": "authenticate",
+            "parameters": [
+              {
+                "name": "self",
+                "type": "Any"
+              },
+              {
+                "name": "username",
+                "type": "str"
+              },
+              {
+                "name": "password",
+                "type": "str"
+              }
+            ],
+            "return-types": [
+              "AuthService.AuthResult"
+            ],
+            "body": "\"\"\"Authenticate a user with username and password.\"\"\"\n        # Find all users\n        users = self._user_repository.find_all()\n        \n        # Find the user with matching username\n        matching_users = [u for u in users if u.username == username]\n        \n        if not matching_users:\n            return self.AuthResult(False, error_message=\"User not found\")\n        \n        user = matching_users[0]\n        \n        # Check password\n        if not user.check_password(password):\n            return self.AuthResult(False, error_message=\"Invalid password\")\n        \n        # Check if user is active\n        if not user.is_active:\n            return self.AuthResult(False, error_message=\"User is inactive\")\n        \n        # Generate token\n        token = self._token_generator(user)\n        \n        return self.AuthResult(True, user=user, token=token)"
+          }
+        }
+      ]
+    }
+  ],
+  "interfaces": [
+    {
+      "name": "Repository",
+      "methods": [
+        {
+          "name": "find_by_id",
+          "parameters": [
+            {
+              "name": "self",
+              "type": "Any"
+            },
+            {
+              "name": "id",
+              "type": "int"
+            }
+          ],
+          "return-types": [
+            "Optional[Entity]"
+          ],
+          "body": "\"\"\"Find an entity by its ID.\"\"\"\n        pass"
+        },
+        {
+          "name": "save",
+          "parameters": [
+            {
+              "name": "self",
+              "type": "Any"
+            },
+            {
+              "name": "entity",
+              "type": "Entity"
+            }
+          ],
+          "return-types": [
+            "Entity"
+          ],
+          "body": "\"\"\"Save an entity to the repository.\"\"\"\n        pass"
+        },
+        {
+          "name": "delete",
+          "parameters": [
+            {
+              "name": "self",
+              "type": "Any"
+            },
+            {
+              "name": "id",
+              "type": "int"
+            }
+          ],
+          "return-types": [
+            "bool"
+          ],
+          "body": "\"\"\"Delete an entity from the repository.\"\"\"\n        pass"
+        }
+      ]
+    }
+  ],
+  "functions": [
+    {
+      "name": "create_user_service",
+      "parameters": [
+        {
+          "name": "connection_string",
+          "type": "str"
+        }
+      ],
+      "return-types": [
+        "Tuple[Tuple[GenericRepository[User], AuthService]]"
+      ],
+      "body": "\"\"\"Create a user repository and authentication service.\"\"\"\n    # Create user repository\n    user_repository = GenericRepository.create_for(User)\n    \n    # Create token generator\n    def generate_token(user: User) -> str:\n        \"\"\"Generate a token for a user.\"\"\"\n        return f\"token_{user.id}_{user.username}_{datetime.datetime.now().timestamp()}\"\n    \n    # Create authentication service\n    auth_service = AuthService(user_repository, generate_token)\n    \n    return user_repository, auth_service"
+    },
+    {
+      "name": "process_input",
+      "parameters": [
+        {
+          "name": "value",
+          "type": "Union[Tuple[str, int, List[str]]]"
+        }
+      ],
+      "return-types": [
+        "Tuple[str",
+        "List[str]]"
+      ],
+      "body": "\"\"\"Process different types of input.\"\"\"\n    if isinstance(value, str):\n        return value.upper()\n    elif isinstance(value, int):\n        return str(value * 2)\n    elif isinstance(value, list):\n        return [item.upper() for item in value]\n    else:\n        raise TypeError(f\"Unsupported type: {type(value)}\")"
+    },
+    {
+      "name": "create_validator",
+      "parameters": [
+        {
+          "name": "predicate",
+          "type": "Callable[Tuple[List, bool]]"
+        }
+      ],
+      "return-types": [
+        "Callable[Tuple[List, bool]]"
+      ],
+      "body": "\"\"\"Create a validator function.\"\"\"\n    def validator(value: T) -> bool:\n        \"\"\"Validate a value.\"\"\"\n        try:\n            return predicate(value)\n        except Exception:\n            return False\n    \n    return validator"
+    },
+    {
+      "name": "main",
+      "parameters": [],
+      "return-types": [
+        "None"
+      ],
+      "body": "\"\"\"Main function to demonstrate the API.\"\"\"\n    # Create user repository and auth service\n    user_repo, auth_service = create_user_service(\"mock://database\")\n    \n    # Create admin user\n    admin = User(username=\"admin\", email=\"admin@example.com\", password_hash=\"\")\n    admin.set_password(\"admin123\")\n    admin.roles.append(\"admin\")\n    user_repo.save(admin)\n    \n    # Create regular user\n    user = User(username=\"user\", email=\"user@example.com\", password_hash=\"\")\n    user.set_password(\"user123\")\n    user_repo.save(user)\n    \n    # Authenticate admin\n    admin_auth = auth_service.authenticate(\"admin\", \"admin123\")\n    if admin_auth.success:\n        print(f\"Admin authenticated with token: {admin_auth.token}\")\n    \n    # Authenticate regular user\n    user_auth = auth_service.authenticate(\"user\", \"user123\")\n    if user_auth.success:\n        print(f\"User authenticated with token: {user_auth.token}\")\n    \n    # Process different inputs\n    print(process_input(\"hello\"))\n    print(process_input(123))\n    print(process_input([\"hello\", \"world\"]))"
+    }
+  ]
+}

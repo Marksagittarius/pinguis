@@ -32,3 +32,16 @@ type Interface struct {
 	Name string `json:"name"`
 	Methods []Function `json:"methods"`
 }
+
+type File struct {
+	Path string `json:"path"`
+	Module string `json:"module"`
+	Classes []Class `json:"classes"`
+	Interfaces []Interface `json:"interfaces"`
+	Functions []Function `json:"functions"`
+}
+
+type Module struct {
+	Name string `json:"name"`
+	Files []File `json:"files"`
+}
