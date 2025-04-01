@@ -63,7 +63,7 @@ func (w *Weaviate) GetClient() *weaviate.Client {
 //
 // Returns:
 //   - error: An error if the operation fails, or nil if the class is successfully added.
-func (w *Weaviate) AddClass(context context.Context, class *models.Class) error {
+func (w *Weaviate) AddClass(class *models.Class) error {
 	return w.client.Schema().ClassCreator().WithClass(class).Do(w.context)
 }
 
