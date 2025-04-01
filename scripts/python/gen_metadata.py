@@ -107,7 +107,7 @@ class PythonAnalyzer:
         function = {
             "name": node.name,
             "parameters": self._extract_parameters(node),
-            "return-types": self._extract_return_types(node),
+            "return_types": self._extract_return_types(node),
             "body": self._get_function_body(node)
         }
         return function

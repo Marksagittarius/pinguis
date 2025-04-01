@@ -211,81 +211,190 @@ func (w *Weaviate) DeleteObject(className string, id string) error {
 //   - float32, float64 -> "number"
 //   - Fields with unsupported types or unexported fields are ignored.
 func ToClass(object any) *models.Class {
-	t := reflect.TypeOf(object)
+    t := reflect.TypeOf(object)
 
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
+    if t.Kind() == reflect.Ptr {
+        t = t.Elem()
+    }
 
-	if t.Kind() != reflect.Struct {
-		return nil
-	}
+    if t.Kind() != reflect.Struct {
+        return nil
+    }
 
-	class := &models.Class{
-		Class:      t.Name(),
-		Properties: []*models.Property{},
-	}
+    class := &models.Class{
+        Class:      t.Name(),
+        Properties: []*models.Property{},
+    }
 
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
+    for i := 0; i < t.NumField(); i++ {
+        field := t.Field(i)
 
-		if !field.IsExported() {
-			continue
-		}
+        if !field.IsExported() {
+            continue
+        }
 
-		propName := field.Name
-		if jsonTag := field.Tag.Get("json"); jsonTag != "" {
-			parts := strings.Split(jsonTag, ",")
-			if parts[0] != "-" {
-				propName = parts[0]
-			}
-		}
+        propName := field.Name
+        if jsonTag := field.Tag.Get("json"); jsonTag != "" {
+            parts := strings.Split(jsonTag, ",")
+            if parts[0] == "-" {
+                continue
+            }
+            if parts[0] != "" {
+                propName = parts[0]
+            }
+        }
 
-		if propName == field.Name {
-			propName = strings.ToLower(propName)
-		}
+        if propName == field.Name {
+            propName = strings.ToLower(propName)
+        }
 
-		var dataType string
-		var isArray bool
+        property := analyzeFieldType(field.Type, propName)
+        if property != nil {
+            class.Properties = append(class.Properties, property)
+        }
+    }
 
-		fieldType := field.Type
-		if fieldType.Kind() == reflect.Slice || fieldType.Kind() == reflect.Array {
-			isArray = true
-			fieldType = fieldType.Elem()
-		}
+    return class
+}
 
-		switch fieldType.Kind() {
-		case reflect.String:
-			dataType = "string"
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			dataType = "int"
-		case reflect.Float32, reflect.Float64:
-			dataType = "number"
-		case reflect.Struct:
-			dataType = fieldType.Name()
+func analyzeFieldType(fieldType reflect.Type, propName string) *models.Property {
+    var dataType string
+    var isArray bool
+    var nestedProperties []*models.NestedProperty
 
-			if len(dataType) > 0 {
-				firstChar := dataType[0:1]
-				dataType = strings.ToUpper(firstChar) + dataType[1:]
-			}
-		default:
-			continue
-		}
+    if fieldType.Kind() == reflect.Slice || fieldType.Kind() == reflect.Array {
+        isArray = true
+        fieldType = fieldType.Elem()
+    }
 
-		if isArray {
-			dataType = dataType + "[]"
-		}
+    if fieldType.Kind() == reflect.Ptr {
+        fieldType = fieldType.Elem()
+    }
 
-		property := &models.Property{
-			Name:     propName,
-			DataType: []string{dataType},
-		}
+    switch fieldType.Kind() {
+    case reflect.String:
+        dataType = "text"
+    case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+        reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+        dataType = "int"
+    case reflect.Float32, reflect.Float64:
+        dataType = "number"
+    case reflect.Struct:
+        dataType = "object"
+        
+        for i := 0; i < fieldType.NumField(); i++ {
+            nestedField := fieldType.Field(i)
+            if !nestedField.IsExported() {
+                continue
+            }
+            
+            nestedPropName := nestedField.Name
+            if jsonTag := nestedField.Tag.Get("json"); jsonTag != "" {
+                parts := strings.Split(jsonTag, ",")
+                if parts[0] == "-" {
+                    continue
+                }
+                if parts[0] != "" {
+                    nestedPropName = parts[0]
+                }
+            }
+            if nestedPropName == nestedField.Name {
+                nestedPropName = strings.ToLower(nestedPropName)
+            }
+            
+            nestedProperty := createNestedProperty(nestedField.Type, nestedPropName)
+            if nestedProperty != nil {
+                nestedProperties = append(nestedProperties, nestedProperty)
+            }
+        }
+    default:
+        return nil
+    }
 
-		class.Properties = append(class.Properties, property)
-	}
+    if isArray {
+        dataType = dataType + "[]"
+    }
 
-	return class
+    property := &models.Property{
+        Name:     propName,
+        DataType: []string{dataType},
+    }
+    
+    if len(nestedProperties) > 0 {
+        property.NestedProperties = nestedProperties
+    }
+
+    return property
+}
+
+func createNestedProperty(fieldType reflect.Type, propName string) *models.NestedProperty {
+    var dataType string
+    var isArray bool
+    var nestedProperties []*models.NestedProperty
+    
+    if fieldType.Kind() == reflect.Slice || fieldType.Kind() == reflect.Array {
+        isArray = true
+        fieldType = fieldType.Elem()
+    }
+    
+    if fieldType.Kind() == reflect.Ptr {
+        fieldType = fieldType.Elem()
+    }
+    
+    switch fieldType.Kind() {
+    case reflect.String:
+        dataType = "text"
+    case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+        reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+        dataType = "int"
+    case reflect.Float32, reflect.Float64:
+        dataType = "number"
+    case reflect.Struct:
+        dataType = "object"
+        
+        for i := 0; i < fieldType.NumField(); i++ {
+            deepNestedField := fieldType.Field(i)
+            if !deepNestedField.IsExported() {
+                continue
+            }
+            
+            deepNestedPropName := deepNestedField.Name
+            if jsonTag := deepNestedField.Tag.Get("json"); jsonTag != "" {
+                parts := strings.Split(jsonTag, ",")
+                if parts[0] == "-" {
+                    continue
+                }
+                if parts[0] != "" {
+                    deepNestedPropName = parts[0]
+                }
+            }
+            if deepNestedPropName == deepNestedField.Name {
+                deepNestedPropName = strings.ToLower(deepNestedPropName)
+            }
+            
+            deepNestedProperty := createNestedProperty(deepNestedField.Type, deepNestedPropName)
+            if deepNestedProperty != nil {
+                nestedProperties = append(nestedProperties, deepNestedProperty)
+            }
+        }
+    default:
+        return nil
+    }
+    
+    if isArray {
+        dataType = dataType + "[]"
+    }
+    
+    nestedProperty := &models.NestedProperty{
+        Name:     propName,
+        DataType: []string{dataType},
+    }
+    
+    if len(nestedProperties) > 0 {
+        nestedProperty.NestedProperties = nestedProperties
+    }
+    
+    return nestedProperty
 }
 
 // ToProperties converts a struct or a pointer to a struct into a map[string]any,
@@ -514,7 +623,7 @@ func ToFields(object any) []graphql.Field {
                 Fields: []graphql.Field{
                     {
                         Name:   "... on " + typeName,
-                        Fields: ToFields(nestedInstance), // Recursive call
+                        Fields: ToFields(nestedInstance),
                     },
                 },
             }

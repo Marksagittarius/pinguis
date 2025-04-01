@@ -33,7 +33,7 @@
                 "type": "int"
               }
             ],
-            "return-types": [
+            "return_types": [
               "None"
             ],
             "body": "self.id = id\n        self.created_at = datetime.datetime.now()\n        self.updated_at = self.created_at"
@@ -49,7 +49,7 @@
                 "type": "Any"
               }
             ],
-            "return-types": [
+            "return_types": [
               "None"
             ],
             "body": "\"\"\"Update the entity's updated_at timestamp.\"\"\"\n        self.updated_at = datetime.datetime.now()"
@@ -65,7 +65,7 @@
                 "type": "Any"
               }
             ],
-            "return-types": [
+            "return_types": [
               "datetime.timedelta"
             ],
             "body": "\"\"\"Calculate the age of the entity.\"\"\"\n        return datetime.datetime.now() - self.created_at"
@@ -104,7 +104,7 @@
                 "type": "type"
               }
             ],
-            "return-types": [
+            "return_types": [
               "None"
             ],
             "body": "self._entities = {}\n        self._next_id = 1\n        self._entity_type = entity_type"
@@ -124,7 +124,7 @@
                 "type": "int"
               }
             ],
-            "return-types": [
+            "return_types": [
               "Optional[T]"
             ],
             "body": "\"\"\"Find an entity by its ID.\"\"\"\n        return self._entities.get(id)"
@@ -140,7 +140,7 @@
                 "type": "Any"
               }
             ],
-            "return-types": [
+            "return_types": [
               "List[T]"
             ],
             "body": "\"\"\"Find all entities in the repository.\"\"\"\n        return list(self._entities.values())"
@@ -160,7 +160,7 @@
                 "type": "T"
               }
             ],
-            "return-types": [
+            "return_types": [
               "T"
             ],
             "body": "\"\"\"Save an entity to the repository.\"\"\"\n        if not isinstance(entity, self._entity_type):\n            raise TypeError(f\"Expected {self._entity_type.__name__}, got {type(entity).__name__}\")\n        \n        if not hasattr(entity, 'id') or entity.id is None:\n            entity.id = self._next_id\n            self._next_id += 1\n        \n        self._entities[entity.id] = entity\n        return entity"
@@ -180,7 +180,7 @@
                 "type": "int"
               }
             ],
-            "return-types": [
+            "return_types": [
               "bool"
             ],
             "body": "\"\"\"Delete an entity from the repository.\"\"\"\n        if id in self._entities:\n            del self._entities[id]\n            return True\n        return False"
@@ -200,7 +200,7 @@
                 "type": "type"
               }
             ],
-            "return-types": [
+            "return_types": [
               "GenericRepository[Any]"
             ],
             "body": "\"\"\"Factory method to create a repository for a specific entity type.\"\"\"\n        return cls(entity_type)"
@@ -243,7 +243,7 @@
                 "type": "Any"
               }
             ],
-            "return-types": [
+            "return_types": [
               "None"
             ],
             "body": "super().__init__(getattr(self, 'id', None))"
@@ -263,7 +263,7 @@
                 "type": "str"
               }
             ],
-            "return-types": [
+            "return_types": [
               "None"
             ],
             "body": "\"\"\"Set the user's password.\"\"\"\n        # In a real application, this would hash the password\n        self.password_hash = f\"hashed_{password}\"\n        self.update()"
@@ -283,7 +283,7 @@
                 "type": "str"
               }
             ],
-            "return-types": [
+            "return_types": [
               "bool"
             ],
             "body": "\"\"\"Check if the provided password is correct.\"\"\"\n        return self.password_hash == f\"hashed_{password}\""
@@ -299,7 +299,7 @@
                 "type": "Any"
               }
             ],
-            "return-types": [
+            "return_types": [
               "bool"
             ],
             "body": "\"\"\"Check if the user is an admin.\"\"\"\n        return \"admin\" in self.roles"
@@ -338,7 +338,7 @@
                 "type": "Callable[Tuple[List, str]]"
               }
             ],
-            "return-types": [
+            "return_types": [
               "None"
             ],
             "body": "token_generator: Callable[[User], str]):\n        self._user_repository = user_repository\n        self._token_generator = token_generator"
@@ -362,7 +362,7 @@
                 "type": "str"
               }
             ],
-            "return-types": [
+            "return_types": [
               "AuthService.AuthResult"
             ],
             "body": "\"\"\"Authenticate a user with username and password.\"\"\"\n        # Find all users\n        users = self._user_repository.find_all()\n        \n        # Find the user with matching username\n        matching_users = [u for u in users if u.username == username]\n        \n        if not matching_users:\n            return self.AuthResult(False, error_message=\"User not found\")\n        \n        user = matching_users[0]\n        \n        # Check password\n        if not user.check_password(password):\n            return self.AuthResult(False, error_message=\"Invalid password\")\n        \n        # Check if user is active\n        if not user.is_active:\n            return self.AuthResult(False, error_message=\"User is inactive\")\n        \n        # Generate token\n        token = self._token_generator(user)\n        \n        return self.AuthResult(True, user=user, token=token)"
@@ -387,7 +387,7 @@
               "type": "int"
             }
           ],
-          "return-types": [
+          "return_types": [
             "Optional[Entity]"
           ],
           "body": "\"\"\"Find an entity by its ID.\"\"\"\n        pass"
@@ -404,7 +404,7 @@
               "type": "Entity"
             }
           ],
-          "return-types": [
+          "return_types": [
             "Entity"
           ],
           "body": "\"\"\"Save an entity to the repository.\"\"\"\n        pass"
@@ -421,7 +421,7 @@
               "type": "int"
             }
           ],
-          "return-types": [
+          "return_types": [
             "bool"
           ],
           "body": "\"\"\"Delete an entity from the repository.\"\"\"\n        pass"
@@ -438,7 +438,7 @@
           "type": "str"
         }
       ],
-      "return-types": [
+      "return_types": [
         "Tuple[Tuple[GenericRepository[User], AuthService]]"
       ],
       "body": "\"\"\"Create a user repository and authentication service.\"\"\"\n    # Create user repository\n    user_repository = GenericRepository.create_for(User)\n    \n    # Create token generator\n    def generate_token(user: User) -> str:\n        \"\"\"Generate a token for a user.\"\"\"\n        return f\"token_{user.id}_{user.username}_{datetime.datetime.now().timestamp()}\"\n    \n    # Create authentication service\n    auth_service = AuthService(user_repository, generate_token)\n    \n    return user_repository, auth_service"
@@ -451,7 +451,7 @@
           "type": "Union[Tuple[str, int, List[str]]]"
         }
       ],
-      "return-types": [
+      "return_types": [
         "Tuple[str",
         "List[str]]"
       ],
@@ -465,7 +465,7 @@
           "type": "Callable[Tuple[List, bool]]"
         }
       ],
-      "return-types": [
+      "return_types": [
         "Callable[Tuple[List, bool]]"
       ],
       "body": "\"\"\"Create a validator function.\"\"\"\n    def validator(value: T) -> bool:\n        \"\"\"Validate a value.\"\"\"\n        try:\n            return predicate(value)\n        except Exception:\n            return False\n    \n    return validator"
@@ -473,7 +473,7 @@
     {
       "name": "main",
       "parameters": [],
-      "return-types": [
+      "return_types": [
         "None"
       ],
       "body": "\"\"\"Main function to demonstrate the API.\"\"\"\n    # Create user repository and auth service\n    user_repo, auth_service = create_user_service(\"mock://database\")\n    \n    # Create admin user\n    admin = User(username=\"admin\", email=\"admin@example.com\", password_hash=\"\")\n    admin.set_password(\"admin123\")\n    admin.roles.append(\"admin\")\n    user_repo.save(admin)\n    \n    # Create regular user\n    user = User(username=\"user\", email=\"user@example.com\", password_hash=\"\")\n    user.set_password(\"user123\")\n    user_repo.save(user)\n    \n    # Authenticate admin\n    admin_auth = auth_service.authenticate(\"admin\", \"admin123\")\n    if admin_auth.success:\n        print(f\"Admin authenticated with token: {admin_auth.token}\")\n    \n    # Authenticate regular user\n    user_auth = auth_service.authenticate(\"user\", \"user123\")\n    if user_auth.success:\n        print(f\"User authenticated with token: {user_auth.token}\")\n    \n    # Process different inputs\n    print(process_input(\"hello\"))\n    print(process_input(123))\n    print(process_input([\"hello\", \"world\"]))"

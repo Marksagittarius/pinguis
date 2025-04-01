@@ -8,7 +8,7 @@ type Parameter struct {
 type Function struct {
 	Name string `json:"name"`
 	Parameters []Parameter `json:"parameters"`
-	ReturnTypes []string `json:"return-types"`
+	ReturnTypes []string `json:"return_types"`
 	Body string `json:"body"`
 }
 
