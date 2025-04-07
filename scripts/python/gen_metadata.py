@@ -7,10 +7,19 @@ from typing import Dict, List, Any, Optional, Union, Set
 
 
 class PythonAnalyzer:
-    def __init__(self):
+    def __init__(self, root_path: str = None):
+        """
+        Initialize the analyzer with an optional root path.
+        
+        Args:
+            root_path: The root directory to use when calculating Python module paths.
+                      If None, the current working directory is used.
+        """
         self.modules = {}
         self.current_file = None
         self.current_module = None
+        self.root_path = os.path.abspath(root_path) if root_path else os.getcwd()
+        print(f"Using root path: {self.root_path}")
 
     def analyze_path(self, path: str) -> Dict:
         is_single_file = os.path.isfile(path) and path.endswith('.py')
@@ -21,18 +30,65 @@ class PythonAnalyzer:
         elif os.path.isdir(path):
             self._process_directory(path)
             
-            result = []
-            for module_name, module_data in self.modules.items():
-                module_dict = {
-                    "name": module_name,
-                    "files": module_data
-                }
-                result.append(module_dict)
+            dir_name = os.path.basename(os.path.normpath(path))
             
-            return result[0]
+            all_files = []
+            for module_files in self.modules.values():
+                all_files.extend(module_files)
+            
+            result = {
+                "name": dir_name,
+                "files": all_files
+            }
+            
+            return result
         else:
             print(f"Error: {path} is not a Python file or directory")
-            sys.exit(1)
+            sys.exit(1)    
+
+    def _get_module_name(self, file_path: str) -> str:
+        """
+        Calculate the Python module name of a file relative to the root path.
+        
+        Args:
+            file_path: The absolute path to the Python file
+            
+        Returns:
+            The Python module name (e.g. 'package.subpackage.module')
+        """
+        abs_path = os.path.abspath(file_path)
+        
+        if abs_path.startswith(self.root_path):
+            rel_path = os.path.relpath(abs_path, self.root_path)
+        else:
+            rel_path = os.path.relpath(abs_path)
+        
+        directory_path = os.path.dirname(rel_path)
+        file_name = os.path.splitext(os.path.basename(rel_path))[0]
+        
+        if file_name == '__init__':
+            return directory_path.replace(os.path.sep, '.')
+        else:
+            if directory_path:
+                return f"{directory_path.replace(os.path.sep, '.')}.{file_name}"
+            else:
+                return file_name
+
+    def _get_relative_path(self, file_path: str) -> str:
+        """
+        Get the path relative to the root path.
+        
+        Args:
+            file_path: The absolute path to the file
+            
+        Returns:
+            The path relative to the root path
+        """
+        abs_path = os.path.abspath(file_path)
+        if abs_path.startswith(self.root_path):
+            return os.path.relpath(abs_path, self.root_path)
+        else:
+            return os.path.basename(file_path)
 
     def _process_file_and_return(self, file_path: str) -> Dict:
         try:
@@ -41,16 +97,13 @@ class PythonAnalyzer:
             
             tree = ast.parse(source_code)
             
-            rel_path = os.path.relpath(file_path)
-            module_name = os.path.dirname(rel_path).replace(os.path.sep, '.')
-            if module_name == '.':
-                module_name = os.path.splitext(os.path.basename(file_path))[0]
+            module_name = self._get_module_name(file_path)
             
             self.current_file = file_path
             self.current_module = module_name
             
             file_data = {
-                "path": file_path,
+                "path": self._get_relative_path(file_path),
                 "module": module_name,
                 "classes": [],
                 "interfaces": [],
@@ -80,8 +133,8 @@ class PythonAnalyzer:
         except Exception as e:
             print(f"Error processing file {file_path}: {e}")
             return {
-                "path": file_path,
-                "module": os.path.splitext(os.path.basename(file_path))[0],
+                "path": self._get_relative_path(file_path),
+                "module": self._get_module_name(file_path),
                 "classes": [],
                 "interfaces": [],
                 "functions": [],
@@ -251,10 +304,12 @@ def main():
     parser = argparse.ArgumentParser(description='Generate metadata from Python code.')
     parser.add_argument('path', help='Path to a Python file or directory')
     parser.add_argument('-o', '--output', default='metadata.json', help='Output JSON file')
+    parser.add_argument('-r', '--root', default=None, 
+                       help='Root directory for calculating Python module paths (default: current directory)')
     
     args = parser.parse_args()
     
-    analyzer = PythonAnalyzer()
+    analyzer = PythonAnalyzer(root_path=args.root)
     modules = analyzer.analyze_path(args.path)
     
     with open(args.output, 'w', encoding='utf-8') as f:

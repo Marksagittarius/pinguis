@@ -44,4 +44,5 @@ type File struct {
 type Module struct {
 	Name string `json:"name"`
 	Files []File `json:"files"`
+	SubModules []Module `json:"sub_modules"`
 }

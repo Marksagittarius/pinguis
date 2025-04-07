@@ -25,3 +25,4 @@ func (spg *SimplePromptGenerator) GeneratePrompt(code string, fileName string) s
 	prompt = strings.ReplaceAll(prompt, "{fileName}", fileName)
 	return prompt
 }
+
