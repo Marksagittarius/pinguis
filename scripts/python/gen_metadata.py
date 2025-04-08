@@ -219,6 +219,7 @@ class PythonAnalyzer:
             elif isinstance(item, ast.FunctionDef):
                 method = {
                     "reciever": node.name,
+                    # Keep using "function" as the key to match the JSON tag in the Go struct
                     "function": self._extract_function(item)
                 }
                 class_data["methods"].append(method)
