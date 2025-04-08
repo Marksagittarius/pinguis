@@ -14,7 +14,7 @@ type Function struct {
 
 type Method struct {
 	Reciever string `json:"reciever"`
-	Function
+	Func Function `json:"function"`
 }
 
 type Field struct {

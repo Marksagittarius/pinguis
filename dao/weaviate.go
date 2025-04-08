@@ -55,6 +55,13 @@ func (w *Weaviate) GetClient() *weaviate.Client {
 	return w.client
 }
 
+// GetContext returns the context associated with the Weaviate object.
+// This context is used for managing request-scoped values and deadlines.
+// It can be useful for canceling or timing out operations performed with the Weaviate client.
+func (w *Weaviate) GetContext() context.Context {
+	return w.context
+}
+
 // AddClass adds a new class to the Weaviate schema.
 //
 // Parameters:
@@ -524,51 +531,6 @@ func processFieldValue(v reflect.Value) any {
 	}
 }
 
-// ToFields converts a Go struct or pointer to a struct into a slice of GraphQL fields.
-// It recursively processes nested structs and respects JSON tags for field names.
-//
-// Parameters:
-//   - object: The input object, which can be any type. If the object is not a struct
-//             or a pointer to a struct, an empty slice is returned.
-//
-// Returns:
-//   - []graphql.Field: A slice of GraphQL fields representing the structure of the input object.
-//
-// Behavior:
-//   - If the input is nil, an empty slice is returned.
-//   - If the input is a pointer, it is dereferenced to access the underlying struct.
-//   - If the input is not a struct, an empty slice is returned.
-//   - Fields that are unexported or have a JSON tag with "-" are ignored.
-//   - JSON tags are used to determine field names, falling back to the struct field name if no tag is present.
-//   - Nested structs are processed recursively, creating nested GraphQL fields.
-//   - Slice and array fields are handled by inspecting their element type.
-//
-// Example:
-//   Given the following struct:
-//     type Example struct {
-//         ID   string `json:"id"`
-//         Name string
-//         Meta struct {
-//             CreatedAt string `json:"created_at"`
-//         }
-//     }
-//
-//   Calling ToFields(Example{}) would produce:
-//     []graphql.Field{
-//         {Name: "id"},
-//         {Name: "Name"},
-//         {
-//             Name: "Meta",
-//             Fields: []graphql.Field{
-//                 {
-//                     Name: "... on Meta",
-//                     Fields: []graphql.Field{
-//                         {Name: "created_at"},
-//                     },
-//                 },
-//             },
-//         },
-//     }
 func ToFields(object any) []graphql.Field {
     t := reflect.TypeOf(object)
     
@@ -616,16 +578,11 @@ func ToFields(object any) []graphql.Field {
         if fieldType.Kind() == reflect.Struct {
             nestedInstance := reflect.New(fieldType).Elem().Interface()
             
-            typeName := fieldType.Name()
+            nestedFields := ToFields(nestedInstance)
             
-            nestedField := graphql.Field{
-                Name: fieldName,
-                Fields: []graphql.Field{
-                    {
-                        Name:   "... on " + typeName,
-                        Fields: ToFields(nestedInstance),
-                    },
-                },
+            nestedField := graphql.Field{Name: fieldName}
+            if len(nestedFields) > 0 {
+                nestedField.Fields = nestedFields
             }
             
             fields = append(fields, nestedField)
