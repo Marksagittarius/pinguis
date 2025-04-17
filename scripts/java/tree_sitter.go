@@ -2,6 +2,7 @@ package java
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/Marksagittarius/pinguis/types"
 
@@ -60,7 +61,7 @@ func (p *TreeSitterJavaParser) ParseFile(filePath string) (*types.File, error) {
 //   - *types.Module: A pointer to the parsed module representation.
 //   - error: An error object if parsing fails, otherwise nil.
 func (p *TreeSitterJavaParser) ParseModule(modulePath string) (*types.Module, error) {
-	return nil, nil
+    return AnalyzeJavaModule(modulePath)
 }
 
 // getNodeText extracts and returns the text content of a given tree-sitter node
@@ -457,4 +458,70 @@ func AnalyzeJavaFile(root *tree_sitter.Node, code []byte, filePath string) types
     }
     
     return file
+}
+
+// AnalyzeJavaModule analyzes a Java module located at the specified path and returns a structured representation of the module.
+//
+// This function recursively traverses the directory tree starting from the given modulePath. It identifies Java source files
+// and submodules, parsing the Java files and organizing them into a hierarchical structure.
+//
+// Parameters:
+//   - modulePath: The root directory path of the Java module to analyze.
+//
+// Returns:
+//   - *types.Module: A pointer to the structured representation of the module, containing its name, files, and submodules.
+//   - error: An error if any issues occur during the analysis, or nil if the analysis is successful.
+//
+// Behavior:
+//   - Skips hidden directories (those starting with a dot).
+//   - Parses files with the ".java" extension using a Tree-Sitter-based Java parser.
+//   - Recursively analyzes subdirectories as submodules, except for the root directory itself.
+//
+// Example:
+//   module, err := AnalyzeJavaModule("/path/to/java/module")
+//   if err != nil {
+//       log.Fatalf("Failed to analyze module: %v", err)
+//   }
+//   fmt.Printf("Module Name: %s\n", module.Name)
+func AnalyzeJavaModule(modulePath string) (*types.Module, error) {
+    module := &types.Module{
+        Name:       filepath.Base(modulePath),
+        Files:      []types.File{},
+        SubModules: []types.Module{},
+    }
+
+    err := filepath.Walk(modulePath, func(path string, info os.FileInfo, err error) error {
+        if err != nil {
+            return err
+        }
+
+        if info.IsDir() && info.Name()[0] == '.' {
+            return filepath.SkipDir
+        }
+
+        if !info.IsDir() && filepath.Ext(info.Name()) == ".java" {
+            parser := NewTreeSitterJavaParser()
+            file, err := parser.ParseFile(path)
+            if err != nil {
+                return err
+            }
+            module.Files = append(module.Files, *file)
+        }
+
+        if info.IsDir() && path != modulePath {
+            subModule, err := AnalyzeJavaModule(path)
+            if err != nil {
+                return err
+            }
+            module.SubModules = append(module.SubModules, *subModule)
+        }
+
+        return nil
+    })
+
+    if err != nil {
+        return &types.Module{}, err
+    }
+
+    return module, nil
 }
