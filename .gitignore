@@ -28,5 +28,7 @@ config.yaml
 *.o
 *.a
 *.test
+*.txt
 
 /doc/
+test/

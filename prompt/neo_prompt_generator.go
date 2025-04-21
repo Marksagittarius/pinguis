@@ -67,3 +67,9 @@ func (npg *NeoPromptGenerator) GeneratePrompt(code string, fileName string) stri
 	prompt = strings.ReplaceAll(prompt, "{fileName}", fileName)
 	return prompt
 }
+
+func (npg *NeoPromptGenerator) WithCode(code, fileName string) *NeoPromptGenerator {
+	npg.Template = strings.ReplaceAll(npg.Template, "{code}", code)
+	npg.Template = strings.ReplaceAll(npg.Template, "{fileName}", fileName)
+	return npg
+}

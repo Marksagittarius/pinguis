@@ -32,3 +32,22 @@ func (pce *PythonCodeExtractor) Postprocess(raw string) string {
 	}
 	return strings.TrimSpace(raw)
 }
+
+type CodeExtractor struct{
+	codeType string
+}
+
+func NewCodeExtractor(codeType string) *CodeExtractor {
+	return &CodeExtractor{
+		codeType: codeType,
+	}
+}
+
+func (ce *CodeExtractor) Postprocess(raw string) string {
+	re := regexp.MustCompile("(?s)```" + ce.codeType + "\\n(.*?)```")
+	match := re.FindStringSubmatch(raw)
+	if len(match) > 1 {
+		return strings.TrimSpace(match[1])
+	}
+	return strings.TrimSpace(raw)
+}
