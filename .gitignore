@@ -16,6 +16,7 @@ test_*.go
 *.dll
 *.so
 *.dylib
+.VscodeCounter
 
 /vendor/
 /Godeps/
@@ -32,3 +33,4 @@ config.yaml
 
 /doc/
 test/
+/test/

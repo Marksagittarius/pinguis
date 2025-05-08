@@ -7,6 +7,7 @@ require (
 	github.com/cloudwego/eino-ext/components/model/ollama v0.0.0-20250421070749-1622ec4d5451
 	github.com/tree-sitter/go-tree-sitter v0.25.0
 	github.com/tree-sitter/tree-sitter-java v0.23.5
+	github.com/tree-sitter/tree-sitter-python v0.23.6
 	github.com/weaviate/weaviate v1.29.0
 	github.com/weaviate/weaviate-go-client/v5 v5.0.2
 )
