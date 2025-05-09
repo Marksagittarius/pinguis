@@ -64,6 +64,9 @@ func main() {
 			if strings.HasSuffix(info.Name(), "_test.py") {
 				return nil
 			}
+			if strings.Contains(info.Name(), "test_case") {
+				return nil
+			}
 			pyFiles = append(pyFiles, path)
 		}
 		return nil
@@ -82,7 +85,7 @@ func main() {
 
 	ctx := context.Background()
 	model := NewChatModelTest(ctx)
-	worker := worker.NewDeepWorker(&worker.DeepWorkerConfig{
+	symWorker := worker.NewSymPromptWorker(&worker.DeepWorkerConfig{
 		WorkerCount:       2,
 		Model:             model,
 		Callback:          worker.PyTestCallBack,
@@ -90,38 +93,35 @@ func main() {
 		MaxIterations:     3,
 		SourcePath:        rootPath,
 		TestPath:          rootPath,
-		PromptGenerator:   func(task *worker.TestTask) string {
+		PromptGenerator: func(task *worker.TestTask) string {
 			npg := prompt.NewNeoPromptGenerator(string(promptTemplate), task.SourceCode, task.SourcePath)
 			basePrompt := npg.WithCode(task.SourceCode, task.SourcePath).WithWeaviate(weaviate, dao.FileInfoHandler).String()
 			if task.Iterations == 0 {
 				return basePrompt
 			}
 
-			basePrompt += "\n\n"
+			basePrompt += "\n"
 			basePrompt += "Your code need to be improved, the report is following:\n"
 			basePrompt += task.TestReport
-			basePrompt += "\n\n"
+			basePrompt += "\n"
+
 			return basePrompt
 		},
-	})
-
+	}, simpleFileIO)
+	
 	for _, pyFile := range pyFiles {
-		code, err := simpleFileIO.Read(pyFile)
-		if err != nil {
-			panic(err)
-		}
-		if err := worker.SubmitTask(string(code), pyFile); err != nil {
+		if err := symWorker.SubmitSymTask(pyFile); err != nil {
 			fmt.Printf("Unable to Submit %s: %v\n", pyFile, err)
 			continue
 		}
 	}
 
-	worker.Run()
-	for worker.ActiveTaskCount() > 0 {
+	symWorker.Run()
+	for symWorker.ActiveTaskCount() > 0 {
 		time.Sleep(1 * time.Second)
-		fmt.Printf("Tasks Remain: %d\n", worker.ActiveTaskCount())
+		fmt.Printf("Tasks Remain: %d\n", symWorker.ActiveTaskCount())
 	}
-	
+
 	fmt.Println("All Tasks Completed.")
-	worker.Shutdown() 
+	symWorker.Shutdown()
 }

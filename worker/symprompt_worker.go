@@ -76,9 +76,58 @@ func (sw *SymPromptWorker) SubmitSymTask(sourcePath string) error {
 		}, []string{}, &paths)
 		minPaths := MinimizePaths(paths)
 
+		nameNode := fn.ChildByFieldName("name")
+		funcName := "unknown"
+		if nameNode != nil {
+			funcName = string(code[nameNode.StartByte():nameNode.EndByte()])
+		}
+		parametersNode := fn.ChildByFieldName("parameters")
+		params := ""
+		if parametersNode != nil {
+			params = string(code[parametersNode.StartByte():parametersNode.EndByte()])
+		}
+		returns := ""
+		retNode := fn.ChildByFieldName("return_type")
+		if retNode != nil {
+			returns = string(code[retNode.StartByte():retNode.EndByte()])
+		}
+
 		pathDescs := []string{}
 		for i, p := range minPaths {
-			pathDescs = append(pathDescs, fmt.Sprintf("Path %d: %v", i+1, p))
+			conds := []string{}
+			retVal := ""
+			for j, kind := range p {
+				if strings.HasPrefix(kind, "if:") {
+					condExpr := strings.TrimPrefix(kind, "if:")
+					if j+1 < len(p) && strings.HasSuffix(p[j+1], "-else") {
+						conds = append(conds, "not("+condExpr+")")
+					} else {
+						conds = append(conds, condExpr)
+					}
+				}
+				if strings.HasPrefix(kind, "elif:") {
+					condExpr := strings.TrimPrefix(kind, "elif:")
+					if j+1 < len(p) && strings.HasSuffix(p[j+1], "-else") {
+						conds = append(conds, "not("+condExpr+")")
+					} else {
+						conds = append(conds, condExpr)
+					}
+				}
+				if strings.HasPrefix(kind, "return") {
+					retVal = strings.TrimSpace(strings.TrimPrefix(kind, "return"))
+				}
+			}
+			desc := fmt.Sprintf("Testcase %d for %s%s%s:\n", i+1, funcName, params, funcReturnTypeStr(returns))
+			if len(conds) > 0 {
+				desc += "test case where " + conds[0] + ",\n"
+				for k := 1; k < len(conds); k++ {
+					desc += "and " + conds[k] + "\n"
+				}
+			}
+			if retVal != "" {
+				desc += "returns '" + retVal + "'"
+			}
+			pathDescs = append(pathDescs, desc)
 		}
 		promptStr := promptTemplate
 		promptStr = strings.ReplaceAll(promptStr, "{path_constraints}", strings.Join(pathDescs, "\n"))
@@ -108,6 +157,13 @@ func (sw *SymPromptWorker) SubmitSymTask(sourcePath string) error {
 func symTestFileName(sourcePath string, funcName string, idx int) string {
 	base := strings.TrimSuffix(filepath.Base(sourcePath), filepath.Ext(sourcePath))
 	return fmt.Sprintf("%s_%s_test_case_%d.py", base, funcName, idx+1)
+}
+
+func funcReturnTypeStr(returns string) string {
+	if returns == "" {
+		return ""
+	}
+	return " -> " + returns
 }
 
 func CollectPathsJava(node *tree_sitter.Node, getNodeText func(*tree_sitter.Node) string, cur []string, paths *[][]string) {
