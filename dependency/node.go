@@ -1,4 +1,4 @@
-package filetree
+package dependency
 
 // FileNode represents a node in a file tree structure.
 // It contains information about the file name, file type,

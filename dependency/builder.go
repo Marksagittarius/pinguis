@@ -1,4 +1,4 @@
-package filetree
+package dependency
 
 import (
     "os"

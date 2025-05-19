@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/Marksagittarius/pinguis/dao"
-	"github.com/Marksagittarius/pinguis/filetree"
 	"github.com/Marksagittarius/pinguis/scripts/java"
 	"github.com/Marksagittarius/pinguis/scripts/python"
 	"github.com/Marksagittarius/pinguis/types"
@@ -42,7 +41,7 @@ type Dependency struct {
 // DependencyGraph represents a graph of dependencies between files
 type DependencyGraph struct {
 	Dependencies []Dependency                  `json:"dependencies"`
-	FileNodes    map[string]*filetree.FileNode `json:"file_nodes"`
+	FileNodes    map[string]*FileNode `json:"file_nodes"`
 }
 
 // DependencyAnalyzer is the interface that defines dependency analysis operations
@@ -61,7 +60,7 @@ type AnalyzerFactory interface {
 // LanguageSpecificAnalyzer provides common functionality for language-specific analyzers
 type LanguageSpecificAnalyzer struct {
 	Cache    *DependencyCache
-	FileTree *filetree.FileTree
+	FileTree *FileTree
 }
 
 // DependencyCache caches the results of dependency analysis
@@ -104,11 +103,11 @@ func (dc *DependencyCache) Store(filePath string, deps []Dependency) {
 // DefaultAnalyzerFactory creates language-specific analyzers based on file extension
 type DefaultAnalyzerFactory struct {
 	Cache    *DependencyCache
-	FileTree *filetree.FileTree
+	FileTree *FileTree
 }
 
 // NewDefaultAnalyzerFactory creates a new analyzer factory
-func NewDefaultAnalyzerFactory(cache *DependencyCache, fileTree *filetree.FileTree) *DefaultAnalyzerFactory {
+func NewDefaultAnalyzerFactory(cache *DependencyCache, fileTree *FileTree) *DefaultAnalyzerFactory {
 	return &DefaultAnalyzerFactory{
 		Cache:    cache,
 		FileTree: fileTree,
@@ -534,7 +533,7 @@ func (a *GenericDependencyAnalyzer) GetDependents(filePath string) ([]Dependency
 
 // analyzeDirectory is a helper function to analyze all files in a directory
 func analyzeDirectory(dirPath string, analyzer DependencyAnalyzer) (*DependencyGraph, error) {
-	treeBuilder := &filetree.FileTreeBuilder{}
+	treeBuilder := &FileTreeBuilder{}
 	tree, err := treeBuilder.BuildTree(dirPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build file tree for %s: %v", dirPath, err)
@@ -542,7 +541,7 @@ func analyzeDirectory(dirPath string, analyzer DependencyAnalyzer) (*DependencyG
 
 	graph := &DependencyGraph{
 		Dependencies: []Dependency{},
-		FileNodes:    make(map[string]*filetree.FileNode),
+		FileNodes:    make(map[string]*FileNode),
 	}
 
 	// Collect all files
@@ -576,7 +575,7 @@ func analyzeDirectory(dirPath string, analyzer DependencyAnalyzer) (*DependencyG
 }
 
 // collectFiles recursively collects file paths from a file tree
-func collectFiles(node *filetree.FileNode, basePath string, filePaths *[]string, nodeMap map[string]*filetree.FileNode) {
+func collectFiles(node *FileNode, basePath string, filePaths *[]string, nodeMap map[string]*FileNode) {
 	path := filepath.Join(basePath, node.FileName)
 
 	if node.FileType != "dir" {
@@ -595,7 +594,7 @@ func collectFiles(node *filetree.FileNode, basePath string, filePaths *[]string,
 type DependencyAnalysisManager struct {
 	AnalyzerFactory AnalyzerFactory
 	Cache           *DependencyCache
-	FileTree        *filetree.FileTree
+	FileTree        *FileTree
 }
 
 // NewDependencyAnalysisManager creates a new dependency analysis manager
@@ -605,7 +604,7 @@ func NewDependencyAnalysisManager(weaviateConfig weaviate.Config, rootPath strin
 		return nil, err
 	}
 
-	treeBuilder := &filetree.FileTreeBuilder{}
+	treeBuilder := &FileTreeBuilder{}
 	tree, err := treeBuilder.BuildTree(rootPath)
 	if err != nil {
 		return nil, err

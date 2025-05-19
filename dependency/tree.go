@@ -1,4 +1,4 @@
-package filetree
+package dependency
 
 type FileTree struct {
 	Root *FileNode `json:"root"`
